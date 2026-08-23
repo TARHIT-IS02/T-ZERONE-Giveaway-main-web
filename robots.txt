@@ -1,0 +1,30 @@
+# =====================================================================================
+# robots.txt — T ZERONE Giveaway (Main Website)
+# https://tzerone-giveaway.netlify.app
+#
+# The public site is fully indexable. The Admin Panel and Lucky Draw consoles are
+# separate deployments on their own hostnames, so they are governed by their own
+# robots files — this one cannot and does not speak for them. Their real protection
+# is Firebase Auth plus the admin allowlist in the Firestore rules, not this file.
+# =====================================================================================
+
+User-agent: *
+Allow: /
+Allow: /index.html
+Allow: /styles.css
+Allow: /script.js
+
+# The standalone game is a client-side sub-app with no indexable text content of its
+# own; keeping it and its assets out of the index avoids thin-content pages and raw
+# image files competing with the giveaway landing page in search results. It stays
+# fully reachable for real users — this only affects crawling/indexing.
+Disallow: /game/
+Disallow: /game/game.html
+Disallow: /game/game.css
+Disallow: /game/game.js
+Disallow: /game/game_assets/
+
+# The custom 404 error document should never be indexed as a real page.
+Disallow: /404.html
+
+Sitemap: https://tzerone-giveaway.netlify.app/sitemap.xml
