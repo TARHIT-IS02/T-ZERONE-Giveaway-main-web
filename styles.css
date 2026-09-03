@@ -1,0 +1,1191 @@
+/* =====================================================================================
+   GLOBAL RESET / BASE HTML & BODY
+   Root-level resets, base typography, global scroll/gesture behavior.
+===================================================================================== */
+
+html {
+  scroll-behavior: smooth;
+  /* Solid color painted first, gradient layered on top: if a frame is ever composited
+     before the gradient paints (a rapid-scroll GPU tile miss), the browser now shows
+     this dark fallback instead of its own default white, which is the white
+     flash/flicker seen during fast scrolling. */
+  background-color: #1A1A2E;
+  background-image: linear-gradient(180deg, #2D2D48 0%, #1A1A2E 100%);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  min-height: 100%;
+  min-height: 100dvh; /* Dynamic viewport height: prevents gaps/tearing as mobile URL bars expand/collapse */
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  /* Reserves the vertical scrollbar's track permanently so toggling body overflow
+     between auto/hidden (preloader + network-error scroll locks below) never changes
+     the available content width — eliminates the horizontal layout shift/jump that
+     removing a scrollbar normally causes on desktop browsers. */
+  scrollbar-gutter: stable;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent !important; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+*:focus { outline: none !important; box-shadow: none; }
+
+/* Image download / long-press protection — applies site-wide (logo, mascots, hero,
+   dashboard, game section, etc). Suppresses the iOS "Save Image/Copy" long-press
+   callout and blocks native drag-to-save on desktop. Paired with a contextmenu/
+   dragstart guard in script.js (covers Android's long-press menu, which isn't a CSS
+   concern). Actual downloading stays available only via the explicit DOWNLOAD IMAGE
+   button in the Image Preview modal (Past Prizes "See More" + Dashboard Winners popup). */
+img, svg, .logo-svg { -webkit-touch-callout: none; -webkit-user-drag: none; -khtml-user-drag: none; -moz-user-drag: none; user-drag: none; }
+
+body {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  background-color: #1A1A2E;
+  background-image: linear-gradient(180deg, #2D2D48 0%, #1A1A2E 100%);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  /* background-attachment: fixed removed — it's the source of the mobile rendering
+     artifacts/tearing during scroll on dynamic-viewport browsers (iOS Safari, Chrome
+     Android). The gradient is anchored on <html> above instead, so it always fills
+     100% of the viewport without clipping regardless of URL-bar show/hide. */
+  color: #FFFFFF;
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  text-rendering: optimizeSpeed;
+  /* Global gesture lock: page only pans vertically. Carousels opt back into horizontal
+     panning individually (see .swipe-carousel-track) so their swipe still works. */
+  touch-action: pan-y;
+}
+
+/* Smooth momentum scrolling on internal scroll areas (iOS/Safari) */
+.see-more-scroll-area, .players-scroller, .swipe-carousel-track, .country-list-ul { -webkit-overflow-scrolling: touch; }
+button, input, select { font-family: 'Poppins', sans-serif; }
+/* =====================================================================================
+   SCROLL-LOCK STATE CLASSES
+   Toggled by script.js for modals, the full-screen preloader, and the dashboard.
+===================================================================================== */
+
+/* Pinned at the exact scroll offset via the inline "top" value set by lockBodyScroll()
+   in script.js, instead of relying on plain overflow:hidden — overflow:hidden alone
+   does not reliably block touch-driven background scroll (or iOS's elastic rubber-band
+   overscroll) while a popup is open, which is what let the background bounce past its
+   real bounds and show unfilled/cut-out gaps at the bottom. Freezing the body as a
+   fixed, full-viewport box removes any document scroll for the browser to bounce
+   against, so the background gradient stays completely fixed and seamlessly filled. */
+body.modal-scroll-lock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  width: 100%;
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* Full-screen overlay scroll lock — engaged only while the initial-load preloader or
+   the network-error/reconnect state (same #app-preloader element, see script.js) is
+   on screen. Background stays fixed and unresponsive to touch/wheel/keyboard scroll
+   input; normal scrolling returns automatically the moment the overlay unmounts. */
+body.app-scroll-locked { overflow: hidden !important; height: 100vh; height: 100dvh; touch-action: none; }
+
+/* Dashboard Absolute scroll freeze override */
+body.dashboard-active { overflow: hidden !important; }
+body.dashboard-active #app-container { padding-bottom: 0 !important; }
+
+/* =====================================================================================
+   APP SHELL / PAGE CONTAINER
+   The single scrolling shell every .view-page lives inside.
+===================================================================================== */
+
+#app-container { width: 100%; max-width: 480px; padding: 20px; min-height: 100vh; position: relative; display: flex; flex-direction: column; transition: padding-bottom 0.2s ease; }
+body.has-bottom-nav #app-container { padding-bottom: 115px; }
+
+.center-stage { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: calc(100vh - 40px); width: 100%; }
+.btn-center-wrapper { display: flex; justify-content: center; align-items: center; width: 100%; }
+
+/* =====================================================================================
+   PAGE / VIEW SWITCHING
+   Only one .view-page has .active at a time; script.js toggles this class.
+===================================================================================== */
+
+.view-page { display: none; will-change: transform, opacity; animation: fadeInAnimation 0.2s cubic-bezier(0.25, 1, 0.5, 1) forwards; width: 100%; }
+.view-page.active { display: block; }
+@keyframes fadeInAnimation { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+
+
+/* =====================================================================================
+   DECORATIVE DIVIDERS
+===================================================================================== */
+
+.neon-divider { border: none; height: 1px; background: linear-gradient(90deg, transparent, #00F2FE, #00A8FF, transparent); margin: 25px auto; width: 90%; opacity: 0.8; }
+.neon-divider.divider-tight { 
+  margin-top: -45px;    /* Pulls the line further UP */
+  margin-bottom: 10px; /* Adjusts space below the line */
+}
+
+
+
+
+
+/* =====================================================================================
+   HEADER / LOGO
+===================================================================================== */
+
+/* Header / Logo */
+
+
+/* Header / Logo */
+.logo-header { 
+  text-align: center; 
+  padding: 2px 0 0 0; 
+  position: relative; 
+  top: -25px; /* Adjust this value to move the logo UP (negative) or DOWN (positive) */
+}
+.logo-wrapper { display: inline-block; cursor: default; }
+.main-brand-logo { max-width: 150px; height: auto; filter: drop-shadow(0 5px 12px rgba(0, 0, 0, 0.5)); }
+
+
+
+
+
+
+/* =====================================================================================
+   REGISTRATION STATUS TEXT
+===================================================================================== */
+
+/* "In Time On" metadata, shown under the live countdown */
+.in-time-on-text { margin-top: 12px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.3px; color: #A5A6B9; text-align: center; }
+.in-time-on-text span { color: #00F2FE; }
+
+/* =====================================================================================
+   HERO / GIVEAWAY ARTWORK
+===================================================================================== */
+
+/* Hero / Giveaway */
+
+/* Zero-flash event-state guard: keeps the hero section (Giveaway image/button vs. Ended
+   banner) invisible-but-space-reserved until updateEventUiState() has resolved the real
+   status (from cache instantly, then confirmed live). Prevents the old bug where the
+   active "Giveaway"/Click Here image briefly flashed before the Ended asset took over. */
+.event-state-pending { visibility: hidden; }
+
+/* .hero-content had no layout rule of its own: the giveaway image self-centers via its own
+   margin:0 auto, but the CTA button (display:inline-block) had nothing to center it against,
+   so it was rendering left-aligned instead of centered under the artwork. */
+.hero-content { text-align: center; }
+
+/* Hero / Giveaway Artwork Position Configuration */
+.giveaway-media-wrapper { 
+  position: relative; 
+  top: 10px; 
+  z-index: 1; 
+  transform: translateZ(0); 
+}
+
+.giveaway-image-title { 
+  max-width: 100%; 
+  height: auto; 
+  display: block; 
+  margin: 0 auto; 
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4)); 
+  z-index: 1; 
+  
+  /* POSITION CONTROL PROPERTIES */
+  position: relative; 
+  top: -10px; /* Adjust this negative value to shift the image HIGHER up */
+}
+
+
+/* Registration-state stacking fix: the CTA must always sit above the giveaway artwork */
+#home-giveaway-btn { position: relative; z-index: 5; }
+
+/* Ended-state stacking fix: character art stays behind, banner/overlays always come forward */
+
+
+
+
+/* =====================================================================================
+   EVENT-ENDED BANNER
+===================================================================================== */
+
+.event-ended-display { position: relative; z-index: 999; margin: 0px auto 0 auto; text-align: center; font-size: 1.8rem; font-weight: 800; color: #FF3B30; text-shadow: 0 0 15px rgba(255,59,48,0.5); letter-spacing: 1px; background: rgba(0,0,0,0.4); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,59,48,0.3); animation: pulseAlert 2s infinite; }
+@keyframes pulseAlert { 0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(255, 59, 48, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); } }
+
+
+
+
+
+/* =====================================================================================
+   BUTTONS — SHARED + VARIANTS
+   Base .btn plus every color/size variant used across the app.
+===================================================================================== */
+
+/* Buttons */
+.btn { font-weight: 800; border: none; border-radius: 24px; padding: 15px 35px; font-size: 1.1rem; cursor: pointer; text-align: center; transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease; display: inline-block; letter-spacing: 0.5px; will-change: transform; }
+.btn:active { transform: scale(0.92) !important; box-shadow: none !important; }
+
+
+
+/* Green CTA Button Configuration */
+.btn-action-green { 
+  background-color: #34C759; 
+  color: #FFFFFF; 
+  box-shadow: 0 6px 25px rgba(52, 199, 89, 0.3); 
+  margin-top: 0;
+
+  /* ALIGNMENT AND SIZE CORRECTIONS */
+  display: flex;               /* Changes layout model to flex */
+  justify-content: center;     /* Centers text inside button horizontally */
+  align-items: center;         /* Centers text inside button vertically */
+  margin-left: auto;           /* Centers button layout container horizontally */
+  margin-right: auto;          /* Centers button layout container horizontally */
+  min-width: 300px;            /* Increases the width of the button */
+  padding: 24px 45px;          /* Increases inner padding for a larger size */
+  font-size: 1.25rem;          /* Boosts text size proportionately */
+}
+
+
+
+
+
+.btn-action-green:hover:not(:disabled) { background-color: #30D158; box-shadow: 0 8px 30px rgba(52, 199, 89, 0.5); }
+.btn-secondary-soft { background-color: rgba(255, 255, 255, 0.1); color: #E2E2EC; border: 1px solid rgba(255, 255, 255, 0.15); width: 100%; }
+.btn-secondary-soft:hover { background-color: rgba(255, 255, 255, 0.15); color: #FFF; }
+.submit-action-wrapper { width: 100%; box-sizing: border-box; overflow: hidden; padding: 0; }
+.btn-submit-form { width: 100%; border-radius: 12px; padding: 14px; font-size: 1.2rem; margin-top: 4px; box-sizing: border-box; box-shadow: none !important; }
+.btn-submit-form:hover:not(:disabled) { box-shadow: none !important; }
+.btn-danger-action { background-color: #FF3B30; color: #FFFFFF; border-radius: 20px; padding: 12px 30px; }
+.btn-danger-action:hover:not(:disabled) { background-color: #FF4F45; box-shadow: 0 0 15px rgba(255,59,48,0.4); }
+.btn-success-action { background-color: #34C759; color: #FFFFFF; border-radius: 20px; padding: 12px 30px; }
+.btn-success-action:hover:not(:disabled) { background-color: #4CD964; box-shadow: 0 0 15px rgba(52,199,89,0.4); }
+.btn-sm { padding: 8px 18px; font-size: 0.9rem; border-radius: 14px; }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+
+/* =====================================================================================
+   PULSE / ATTENTION ANIMATIONS
+===================================================================================== */
+
+.multi-pulse { animation: normalPulse 2s infinite; }
+@keyframes normalPulse { 0% { box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.5); } 70% { box-shadow: 0 0 0 12px rgba(52, 199, 89, 0); } 100% { box-shadow: 0 0 0 0 rgba(52, 199, 89, 0); } }
+.back-btn-styled { border-radius: 12px; font-size: 1rem; padding: 12px; }
+#page-form .top-space-btn { margin-top: 15px; }
+
+/* =====================================================================================
+   REGISTRATION COUNTDOWN TIMER
+===================================================================================== */
+
+/* Registration Timer */
+.reg-timer-wrapper {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  will-change: grid-template-rows, opacity, transform;
+  transition: grid-template-rows 0.45s cubic-bezier(0.25, 1, 0.5, 1),
+              opacity 0.3s ease,
+              transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+  transform: translateZ(0) scaleY(1);
+  transform-origin: top center;
+}
+.reg-timer-wrapper > * { min-height: 0; overflow: hidden; }
+.reg-timer-wrapper.timer-collapsed {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateZ(0) scaleY(0.96);
+  margin: 0;
+  pointer-events: none;
+}
+.reg-timer-wrapper.timer-collapsed .reg-timer-section,
+.reg-timer-wrapper.timer-collapsed .neon-divider { margin: 0; padding: 0; border: none; height: 0; }
+
+.reg-timer-section { text-align: center; }
+.reg-timer-row { display: flex; align-items: flex-start; justify-content: center; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+.reg-timer-block { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.reg-timer-label { font-size: 0.75rem; font-weight: 800; letter-spacing: 1.5px; color: #E2E2EC; }
+.reg-timer-value { background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 20px; padding: 5px 20px; font-size: 1.7rem; font-weight: 800; min-width: 64px; text-align: center; color: #FFFFFF; }
+.reg-timer-colon { font-size: 1.8rem; font-weight: 800; color: #A5A6B9; margin-top: 30.5px; }
+
+/* =====================================================================================
+   HOME CAROUSEL (LATEST PRIZE / NOTICE)
+===================================================================================== */
+
+/* Carousel */
+.swipe-carousel-wrapper { width: 100%; position: relative; overflow: visible; padding: 0 4px 5px; }
+/* NOTE: overflow-x:auto forces the browser to also compute overflow-y as "auto" (a CSS spec quirk),
+   which was clipping the Latest Prize / Notice card's box-shadow at the top/bottom of the scrollport.
+   Fix: give the track extra bottom padding (beyond the shadow's full offset+blur reach) so the
+   drop-shadow has room to render completely before the clip edge, instead of being truncated. */
+/* touch-action: pan-x pan-y (not pan-x alone) — pan-x alone tells the browser this
+   element ONLY handles horizontal gestures, so a vertical swipe starting here does
+   nothing instead of falling through to page scroll. pan-x pan-y lets the browser's
+   native gesture recognizer keep BOTH axes live and pick direction from the swipe
+   itself: horizontal drag scrolls the track, vertical drag scrolls the page. */
+.swipe-carousel-track { display: flex; overflow-x: auto; overflow-y: visible; scroll-snap-type: x mandatory; gap: 15px; padding: 20px 0 40px; scrollbar-width: none; scroll-behavior: smooth; will-change: scroll-position; transform: translateZ(0); touch-action: pan-x pan-y; }
+.swipe-carousel-track::-webkit-scrollbar { display: none; }
+.carousel-slide { min-width: 100%; scroll-snap-align: center; }
+
+.slider-arrow { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.08); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.15); border-radius: 50%; width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; color: rgba(255,255,255,0.85); cursor: pointer; z-index: 10; transition: opacity 0.2s ease; outline: none; }
+/* Permanently translucent glassmorphism — hover/active/focus never darken the button */
+.slider-arrow:hover, .slider-arrow:active, .slider-arrow:focus, .slider-arrow:focus-visible { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
+.slider-arrow.left { left: 10px; }
+.slider-arrow.right { right: 10px; }
+.slider-arrow.hidden { opacity: 0; pointer-events: none; }
+
+.latest-prize-section { text-align: center; }
+.section-title { font-size: 1.3rem; font-weight: 700; letter-spacing: 1px; margin-bottom: 15px; }
+.prize-card { background-color: transparent; border-radius: 24px; overflow: visible; padding: 0; width: 100%; }
+.prize-image-frame { position: relative; width: 100%; border-radius: 24px; overflow: hidden; background: rgba(255, 255, 255, 0.04); contain: layout paint; transform: translateZ(0); backface-visibility: hidden; box-shadow: 0 12px 26px -8px rgba(0, 0, 0, 0.4), 0 4px 10px -3px rgba(0, 0, 0, 0.25); }
+.ratio-1-1 .prize-image-frame { aspect-ratio: 1 / 1; }
+.prize-image { width: 100%; height: 100%; border-radius: 24px; display: block; object-fit: cover; }
+/* Caption gradient opacity is controlled by this variable — change the number (0 to 1) to make it darker/lighter */
+:root { --caption-gradient-opacity: 0.55; }
+.prize-caption-overlay { position: absolute; left: 0; right: 0; bottom: 0; padding: 30px 18px 14px; background: linear-gradient(to top, rgba(0,0,0,var(--caption-gradient-opacity)) 0%, rgba(0,0,0,calc(var(--caption-gradient-opacity) * 0.65)) 55%, rgba(0,0,0,0) 100%); pointer-events: none; }
+.prize-caption { font-weight: 600; font-size: 0.95rem; margin: 0; color: #FFFFFF; text-align: left; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+/* Fallback placeholder for any prize image slot with no uploaded image (Latest Prize, Past Prizes, See More) — reuses the same icon style as the Creator Badge placeholder for visual consistency, at 50% opacity. */
+.prize-fallback-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.02); }
+.prize-fallback-placeholder svg { width: 32%; height: 32%; max-width: 70px; max-height: 70px; opacity: 0.5; }
+
+/* =====================================================================================
+   PAST PRIZES GRID (HOME PREVIEW)
+===================================================================================== */
+
+/* Past Prizes preview grid (home carousel) */
+.past-prize-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.past-prize-cell-container { display: flex; flex-direction: column; align-items: center; width: 100%; }
+.past-prize-cell { position: relative; aspect-ratio: 1 / 1; border-radius: 20px; overflow: hidden; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: center; width: 100%; contain: layout paint; transform: translateZ(0); box-shadow: 0 12px 26px -8px rgba(0, 0, 0, 0.4), 0 4px 10px -3px rgba(0, 0, 0, 0.25); }
+.past-prize-cell-caption { position: absolute; left: 0; right: 0; bottom: 0; padding: 22px 12px 8px; font-size: 0.7rem; color: #FFFFFF; text-align: left; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: linear-gradient(to top, rgba(0,0,0,var(--caption-gradient-opacity)) 0%, rgba(0,0,0,calc(var(--caption-gradient-opacity) * 0.65)) 55%, rgba(0,0,0,0) 100%); pointer-events: none; }
+.past-prize-thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
+.empty-cell { color: #A5A6B9; font-size: 0.9rem; font-weight: 600; text-align: center; padding: 10px; }
+.see-more-cell { cursor: pointer; font-weight: 800; letter-spacing: 0.5px; color: #FFFFFF; background: rgba(255, 255, 255, 0.08); transition: background 0.2s ease, transform 0.15s ease; padding: 16px; text-align: center; display: flex; align-items: center; justify-content: center; flex-direction: column;}
+.see-more-cell span { font-size: 1.7rem; line-height: 1.05; text-align: center; }
+.see-more-cell:hover { background: rgba(255, 255, 255, 0.15); }
+.see-more-cell:active { transform: scale(0.96); }
+
+/* =====================================================================================
+   "SEE MORE" FULL-LIST MODAL
+===================================================================================== */
+
+/* See More modal Overlay rules */
+#page-see-more.active {
+    position: fixed;
+    inset: 0;
+    z-index: 850;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(10, 10, 18, 0.85);
+    backdrop-filter: blur(8px);
+    padding: 20px;
+    overflow: hidden;
+}
+.glass-form-panel.see-more-panel {
+    position: relative;
+    top: 0;
+    max-width: 560px;
+    width: 100%;
+    margin-top: 0;
+    padding-top: 24px;
+    height: auto;
+    max-height: 82vh;
+}
+.modal-close-x.see-more-close-btn { position: absolute; top: 16px; right: 16px; left: auto; }
+.see-more-scroll-area { flex: 1; overflow-y: auto; margin-top: 10px; padding-right: 4px; min-height: 0; }
+.see-more-scroll-area::-webkit-scrollbar { width: 6px; }
+.see-more-scroll-area::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 10px; }
+.see-more-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+.see-more-cell-item { position: relative; display: block; width: 100%; border-radius: 18px; overflow: hidden; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35); transition: transform 0.1s ease; contain: layout paint; }
+.see-more-cell-item:active { transform: scale(0.96); }
+.see-more-img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; cursor: pointer; }
+.see-more-caption-overlay { position: absolute; left: 0; right: 0; bottom: 0; padding: 24px 12px 10px; background: linear-gradient(to top, rgba(0,0,0,var(--caption-gradient-opacity)) 0%, rgba(0,0,0,calc(var(--caption-gradient-opacity) * 0.65)) 55%, rgba(0,0,0,0) 100%); pointer-events: none; }
+.see-more-caption { font-size: 0.82rem; color: #FFFFFF; text-align: left; font-weight: 600; margin: 0; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+/* Image Preview Modal Specifics */
+.preview-modal-card { max-width: 90vw !important; width: auto !important; background: transparent !important; box-shadow: none !important; border: none !important; padding: 0 !important; }
+.full-preview-img { max-width: 100%; max-height: 70vh; border-radius: 16px; object-fit: contain; box-shadow: 0 15px 40px rgba(0,0,0,0.6); display: block; margin: 0 auto; }
+/* Preview close (X) button sits inside the image frame's top-right corner, over the shine-sweep layer */
+.modal-close-x.preview-close-btn { top: 12px; right: 12px; left: auto; background: rgba(10, 10, 18, 0.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 6; }
+
+/* =====================================================================================
+   CREATOR BADGE
+===================================================================================== */
+
+/* Creator Badge — bounded strictly between its two divider lines, ratio driven live from Admin Panel */
+.creator-badge-wrapper { display: flex; justify-content: center; padding: 6px 0; overflow: hidden; }
+.creator-badge-frame { position: relative; width: 150px; max-width: 60%; aspect-ratio: 1 / 1; border-radius: 16px; overflow: hidden; background: transparent; border: none; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4)); }
+.creator-badge-placeholder { opacity: 0.55; width: 55%; height: 55%; }
+.creator-badge-img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 16px; }
+
+/* =====================================================================================
+   GLASS PANEL SHELL (SHARED)
+===================================================================================== */
+
+/* Glass panels */
+.glass-form-panel { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 28px; padding: 26px 24px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); width: 100%; }
+.panel-heading { text-align: center; font-size: 1.3rem; letter-spacing: 0.5px; margin-bottom: 18px; color: #FFFFFF; }
+
+/* =====================================================================================
+   REGISTRATION FORM
+===================================================================================== */
+
+/* Form */
+.form-group { margin-bottom: 13px; position: relative; }
+.form-group input { width: 100%; background-color: #555770; border: none; border-radius: 14px; padding: 18px 20px; color: #FFFFFF; font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 1.05rem; transition: background-color 0.2s ease; }
+.form-group input::placeholder { color: #A5A6B9; opacity: 1; }
+.form-group input:focus { background-color: #636582; }
+.phone-group-wrapper { display: flex; gap: 10px; }
+.country-btn { background-color: #555770; border: none; color: #FFFFFF; border-radius: 14px; padding: 0 15px; font-weight: 700; font-size: 0.95rem; cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 5px; }
+.country-btn:active { transform: scale(0.95); }
+
+/* =====================================================================================
+   CONFIRM / REVIEW PAGE
+===================================================================================== */
+
+/* Confirm page */
+.pro-confirm-panel { background: linear-gradient(145deg, rgba(30, 30, 48, 0.9), rgba(20, 20, 35, 0.9)); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6); position: relative; overflow: visible; margin-top: 130px; padding-top: 70px; }
+
+/* ===== CONFIRM DETAILS MASCOT — ADMIN CUSTOMIZATION VARIABLES ===== */
+:root {
+  --confirm-mascot-width: 150px;  /* Size of the mascot wrapper */
+  --confirm-mascot-scale: 170%;   /* Size of the mascot image within its wrapper */
+  --confirm-mascot-top: -188px; /* Vertical position */
+  --confirm-mascot-left: 40%;     /* Horizontal position */
+}
+.confirm-mascot-wrapper { position: absolute; top: var(--confirm-mascot-top); left: var(--confirm-mascot-left); transform: translateX(-50%); width: var(--confirm-mascot-width); pointer-events: none; z-index: 5; }
+.confirm-mascot-img { width: var(--confirm-mascot-scale); height: auto; display: block; filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.4)); }
+.pro-confirmation-box { background: rgba(0, 0, 0, 0.3); border-radius: 16px; padding: 24px; margin-bottom: 30px; border: 1px solid rgba(255, 255, 255, 0.05); animation: slideUpFade 0.4s ease-out; }
+.confirm-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px dashed rgba(255, 255, 255, 0.1); }
+.confirm-row:last-child { border-bottom: none; padding-bottom: 0; }
+.confirm-label { color: #A5A6B9; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px; }
+.confirm-value { color: #FFFFFF; font-size: 1.05rem; font-weight: 700; text-align: right; }
+.highlight-value { color: #00F2FE; text-shadow: 0 0 10px rgba(0, 242, 254, 0.4); }
+.dual-btn-row { display: flex; gap: 15px; justify-content: center; width: 100%; }
+.dual-btn-row .btn { flex: 1; }
+/* Confirm Details page SUBMIT button is scoped here, not via .btn-action-green globally,
+   so the home page CTA (min-width/padding/font-size) never bleeds into this smaller button. */
+.dual-btn-row .btn-success-action { min-width: 0; width: auto; padding: 12px 30px; font-size: 1rem; margin-left: 0; margin-right: 0; }
+@keyframes slideUpFade { from { transform: translateY(15px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* =====================================================================================
+   SUCCESS PAGE
+===================================================================================== */
+
+/* Success page adjustments */
+
+/* ===== SUCCESS PAGE — ADMIN CUSTOMIZATION VARIABLES =====
+   Adjust the whole success card's scale/position, and the mascot image on top of it, independently. */
+:root {
+  --success-box-scale: 1;         /* Scale of the entire success container card */
+  --success-box-top: 130px;       /* Top margin of the success container card (retains current centered layout by default) */
+  --success-mascot-width: 150px;  /* Size of the mascot wrapper */
+  --success-mascot-scale: 170%;   /* Size of the mascot image within its wrapper */
+  --success-mascot-top: -148.5px; /* Vertical position */
+  --success-mascot-left: 41%;     /* Horizontal position */
+}
+
+
+
+.premium-success-panel { 
+  background: linear-gradient(145deg, rgba(52, 199, 89, 0.08), rgba(20, 20, 35, 0.95)); 
+  border: 1px solid rgba(52, 199, 89, 0.3); 
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(52, 199, 89, 0.05); 
+  position: relative; 
+  overflow: visible; 
+  margin-top: 90px; /* Reduced from 130px to pull the box higher */
+  padding-top: 40px;  /* Reduced from 70px to make the box shorter from top */
+  padding-bottom: 15px; /* Added to make the box tighter at the bottom */
+  transform: scale(var(--success-box-scale)); 
+  transform-origin: center top; 
+}
+
+
+
+
+.success-mascot-wrapper { position: absolute; top: var(--success-mascot-top); left: var(--success-mascot-left); transform: translateX(-50%); width: var(--success-mascot-width); pointer-events: none; z-index: 5; }
+.success-mascot-img { width: var(--success-mascot-scale); height: auto; display: block; filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.4)); }
+.success-icon-wrapper { margin-bottom: 5px; animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+@keyframes bounceIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+.success-main-title { display: flex; flex-direction: column; align-items: center; color: #39FF14; line-height: 1.1; margin-bottom: 8px; text-align: center; }
+.success-line-1 { font-size: 1.4rem; letter-spacing: 2px; }
+.success-line-2 { font-size: 2.2rem; font-weight: 800; letter-spacing: 1px; }
+.success-sub-title { font-size: 1rem; color: #FFFFFF; margin-bottom: 15px; }
+.success-desc { font-size: 0.9rem; color: #A5A6B9; margin-bottom: 25px; font-weight: 600; }
+
+
+
+
+.social-box-widget { display: flex; flex-direction: row; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+.full-w-btn { width: 100%; justify-content: center; }
+.social-box-widget .full-w-btn { width: auto; flex: 1 1 130px; padding: 14px 10px; font-size: 0.95rem; }
+.top-space-btn { margin-top: 15px; }
+
+/* Success page: pull the social cluster and Back button into one tight, unified group */
+#page-success .social-box-widget { margin-bottom: 8px; }
+#page-success .back-btn-styled.top-space-btn { margin-top: 8px; }
+
+.pro-social-btn { padding: 14px 20px; border-radius: 14px; font-size: 1rem; font-weight: 800; letter-spacing: 0.5px; box-shadow: 0 8px 20px rgba(0,0,0,0.3); transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; overflow: hidden; border: 1px solid transparent; }
+.pro-social-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 25px rgba(0,0,0,0.5); }
+.pro-social-btn.fb-btn { background: linear-gradient(135deg, #1877F2, #0C5CBF); border-color: rgba(24, 119, 242, 0.4); }
+.pro-social-btn.yt-btn { background: linear-gradient(135deg, #FF0000, #B30000); border-color: rgba(255, 0, 0, 0.4); }
+
+/* =====================================================================================
+   DASHBOARD — LAYOUT SHELL
+===================================================================================== */
+
+/* Dashboard strictly defined bounds */
+#page-dashboard .center-stage { height: calc(100vh - 70px); display: flex; align-items: center; justify-content: center; padding-bottom: 130px; }
+/* Increased from 70%/64vh so the scrollable players/winners list can show more rows at once.
+   Rewritten as one-property-per-line for manual editing, and given explicit centering +
+   individually adjustable position offsets. top/right/bottom/left default to their normal
+   (0-offset) values below, so nothing visually shifts — they're just now exposed for
+   direct manual adjustment. */
+.max-width-dashboard {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 70%;
+  max-height: 76vh;
+  min-height: 0;
+  margin: 0 auto;
+  position: relative;
+  top: 90px;
+  right: auto;
+  bottom: auto;
+  left: 0;
+  overflow: visible;
+  backdrop-filter: blur(20px);
+}
+
+/* =====================================================================================
+   DASHBOARD MASCOT
+===================================================================================== */
+
+/* ===== DASHBOARD MASCOT — ADMIN CUSTOMIZATION VARIABLES =====
+   Change these values to resize/reposition the character image that sits
+   on top of the "DASHBOARD" heading, without affecting the rest of the layout. */
+:root {
+  --dash-mascot-width: 250px;   /* Size of the mascot image */
+  --dash-mascot-top: 9px;       /* Fine-tune vertical offset (use negative to move up) */
+  --dash-mascot-left: 12px;      /* Fine-tune horizontal offset (use negative to move left) */
+  --dash-mascot-overlap: -55px; /* How far the mascot overlaps down onto the dashboard card */
+}
+
+/* Dashboard mascot — now a CHILD of .max-width-dashboard (see index.html) instead of a
+   sibling before it, and pinned with position:absolute relative to the panel's own box
+   (the panel already establishes position:relative above). `translateY(-100%)` lifts it
+   by exactly its own rendered height — regardless of the image's real pixel size — so it
+   sits flush above the panel's top edge, then the extra `- var(--dash-mascot-overlap))`
+   pulls it back down by the same overlap amount as before. Net effect: identical visual
+   position to the old sibling+margin setup, but now the mascot is structurally bound to
+   the panel — if the panel is ever moved/resized (e.g. via the top/left offsets above),
+   the mascot automatically travels with it with zero extra adjustment. */
+.dashboard-mascot-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  transform: translateY(calc(-100% - var(--dash-mascot-overlap)));
+  display: flex;
+  justify-content: center;
+  z-index: 5;
+  pointer-events: none;
+}
+.dashboard-mascot-img { width: var(--dash-mascot-width); height: auto; display: none; position: relative; top: var(--dash-mascot-top); left: var(--dash-mascot-left); filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4)); will-change: transform; transform: translateZ(0); }
+.dashboard-mascot-img.active { display: block; }
+/* NOTE: this rule previously read `padding-top: -50px;`. Negative padding is invalid CSS
+   and is silently dropped by every browser, so it was dead code with zero visual effect —
+   removed. (If a negative top offset is ever wanted here, `margin-top` is the correct
+   property; see the upgrade-suggestions.md notes for how to add that safely.) */
+.font-size-large { font-size: 1.2rem !important; }
+/* Dashboard header only — kept separate from .font-size-large so the "PAST PRIZES" panel heading is untouched */
+.dashboard-heading-lg { font-size: 1.6rem !important; letter-spacing: 0.5px; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35); }
+
+/* =====================================================================================
+   DASHBOARD TABS (REGISTERED / WINNERS)
+===================================================================================== */
+
+.public-tabs-nav { display: flex; gap: 10px; margin-bottom: 15px; background: rgba(0,0,0,0.15); padding: 6px; border-radius: 14px; flex-shrink: 0; }
+.p-tab-btn { flex: 1; background: transparent; border: none; color: #A5A6B9; padding: 10px; font-weight: 700; font-size: 0.95rem; cursor: pointer; border-radius: 10px; transition: all 0.2s ease; }
+.p-tab-btn.active { background-color: rgba(255, 255, 255, 0.15); color: #FFFFFF; }
+.public-tab-content { display: none; flex-direction: column; flex: 1; overflow: hidden; min-height: 0; }
+.public-tab-content.active { display: flex; }
+
+/* =====================================================================================
+   DASHBOARD SEARCH & SORT CONTROLS
+===================================================================================== */
+
+.search-filter-row { display: flex; gap: 10px; align-items: center; }
+
+/* "NEW" sort button (#sort-filter-btn) — explicit, !important-flagged width/height so
+   these two values always win over any framework/global rule, plus position:relative
+   with all four offsets exposed at 0 for direct manual nudging later. */
+.filter-btn {
+  width: 90px !important;
+  height: 55px !important;
+  position: relative;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: -1px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  text-align: center;
+  box-sizing: border-box;
+  margin-left: 0;
+}
+
+.search-input-container { flex-shrink: 1; }
+.search-filter-row .search-input-container { flex: 1 1 auto; margin: 0; }
+
+/* "SEARCH NAME OR ID" input — same treatment: explicit !important width/height (55px
+   matches the NEW button so both stay visually aligned in the row) and position:relative
+   with manually-adjustable offsets. */
+.search-input-container input {
+  width: 100% !important;
+  height: 55px !important;
+  position: relative;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  padding: 14px 20px;
+  color: #FFFFFF;
+  font-weight: 700;
+  text-align: center;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+/* =====================================================================================
+   DASHBOARD PLAYER LIST
+===================================================================================== */
+
+.players-scroller { margin-top: 20px; flex: 1; overflow-y: auto; overflow-x: hidden; padding-right: 5px; min-height: 0; overscroll-behavior: contain; scrollbar-width: thin; }
+.players-scroller::-webkit-scrollbar { width: 6px; height: 6px; }
+.players-scroller::-webkit-scrollbar-track { background: transparent; }
+.players-scroller::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 10px; }
+
+.player-row-item { padding: 14px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 1.05rem; font-weight: 600; display: flex; justify-content: space-between; flex-direction: column; }
+.player-row-item span { display: block; }
+.player-row-item .p-meta-id, .player-row-item .p-meta-date { color: #A5A6B9; font-size: 0.90rem; margin-top: 2px; }
+.empty-state-text { text-align: center; color: #A5A6B9; padding: 30px 0; font-weight: 600; }
+
+/* =====================================================================================
+   DASHBOARD WINNER CARDS
+===================================================================================== */
+
+/* Winner cards */
+.winner-card-item { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 14px 16px; margin-bottom: 12px; cursor: pointer; transition: transform 0.15s ease, background 0.2s ease; contain: content; }
+.winner-card-item:hover { background: rgba(255, 255, 255, 0.08); }
+.winner-card-item:active { transform: scale(0.98); }
+.winner-card-row { display: flex; justify-content: space-between; align-items: center; }
+.winner-card-name { font-weight: 700; font-size: 1.02rem; color: #FFFFFF; }
+
+/* =====================================================================================
+   MODAL SHELL (SHARED — ALERT / WINNER / PREVIEW / COUNTRY)
+===================================================================================== */
+
+/* Modals */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(10, 10, 18, 0.85); backdrop-filter: blur(8px); z-index: 1000; display: flex; justify-content: center; align-items: center; padding: 20px; }
+.modal-overlay.hidden { display: none !important; }
+#custom-alert-overlay { z-index: 9999; }
+.modal-box-card { background: #252538; border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; width: 100%; max-width: 360px; padding: 25px; box-shadow: 0 20px 45px rgba(0,0,0,0.5); will-change: transform, opacity; animation: modalPopIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; position: relative; text-align: center; }
+.modal-body-text { font-size: 0.95rem; color: #E2E2EC; margin-top: 10px; line-height: 1.5; }
+
+.custom-popup-card { border: 1px solid rgba(255,255,255,0.15); }
+.popup-icon { margin-bottom: 15px; animation: bounceIn 0.5s; }
+.popup-error { border-color: rgba(255,59,48,0.4); box-shadow: 0 10px 40px rgba(255,59,48,0.15); }
+.popup-success { border-color: rgba(52,199,89,0.4); box-shadow: 0 10px 40px rgba(52,199,89,0.15); }
+.popup-warning { border-color: rgba(255,210,0,0.4); box-shadow: 0 10px 40px rgba(255,210,0,0.15); }
+.popup-info { border-color: rgba(0,168,255,0.4); box-shadow: 0 10px 40px rgba(0,168,255,0.15); }
+
+@keyframes modalPopIn { from { transform: scale(0.95) translateY(10px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+
+/* =====================================================================================
+   WINNER DETAILS MODAL
+===================================================================================== */
+
+/* Winner Details Modal */
+.winner-modal-card { max-width: 380px; text-align: left; padding-top: 45px; }
+.modal-close-x { position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.08); border: none; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #FFFFFF; z-index: 5; }
+.modal-close-x:active { transform: scale(0.9); }
+.winner-modal-title { text-align: center; font-size: 1.6rem; color: #FFD200; text-shadow: 0 0 12px rgba(255,210,0,0.4); margin-bottom: 18px; letter-spacing: 1px; }
+/* Professional drop-shadow added for depth/elevation on the winner popup image box. */
+.winner-modal-prize-box { position: relative; background: rgba(255,255,255,0.05); border-radius: 18px; aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 18px; box-shadow: 0 12px 26px -8px rgba(0, 0, 0, 0.4), 0 4px 10px -3px rgba(0, 0, 0, 0.25); }
+.winner-modal-prize-img { width: 100%; height: 100%; object-fit: contain; max-width: 100%; cursor: zoom-in; background: rgba(0,0,0,0.15); }
+.winner-modal-prize-img.hidden { display: none; }
+.winner-modal-tag { position: absolute; bottom: 12px; right: 12px; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); color: #39FF14; font-size: 0.8rem; font-weight: 800; padding: 6px 14px; border-radius: 10px; border: 1px solid rgba(52, 199, 89, 0.3); text-transform: uppercase; letter-spacing: 1px; z-index: 5; }
+.winner-modal-info-box { background: rgba(0,0,0,0.25); border-radius: 14px; padding: 14px 16px; }
+.winner-info-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; gap: 10px; }
+.winner-info-label { color: #A5A6B9; font-weight: 700; font-size: 0.9rem; }
+.winner-info-value { color: #FFD200; font-weight: 700; font-size: 1rem; text-align: right; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.copy-id-btn { background: rgba(255,255,255,0.1); border: none; border-radius: 8px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #FFFFFF; flex-shrink: 0; transition: background 0.2s ease, transform 0.15s ease; }
+.copy-id-btn:active { transform: scale(0.9); }
+.copy-id-btn.copied { background: rgba(52,199,89,0.2); }
+
+/* =====================================================================================
+   COUNTRY CODE PICKER MODAL
+===================================================================================== */
+
+/* Country modal */
+/* Card + search-row overrides for this modal only — were inline styles in the markup,
+   moved here so every override lives in the stylesheet, not the HTML. */
+.country-modal-box { max-height: 80vh; display: flex; flex-direction: column; }
+.country-search-input-container { margin-bottom: 15px; }
+.country-list-ul { list-style: none; max-height: 240px; overflow-y: auto; overflow-x: hidden; border-radius: 12px; background: rgba(0,0,0,0.15); flex-grow: 1; text-align: left; }
+.country-list-ul li { padding: 14px 16px; cursor: pointer; font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.country-list-ul li:hover { background-color: rgba(255,255,255,0.05); }
+.flag-icon { font-size: 1.3rem; }
+
+.custom-country-code-wrapper { margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
+.custom-country-code-label { font-size: 0.85rem; color: #A5A6B9; display: block; margin-bottom: 8px; text-align: left; }
+
+/* Clean 50/50 split: input and Apply button share the row equally */
+.custom-country-inline-flex { display: flex; gap: 10px; align-items: center; width: 100%; box-sizing: border-box; }
+.custom-country-inline-flex input { flex: 1 1 50%; width: 50%; min-width: 0; border-radius: 12px; background: rgba(255,255,255,0.1); border: none; color: #FFF; padding: 12px 14px; font-weight: bold; box-sizing: border-box; text-align: center; overflow: visible; text-overflow: clip; }
+
+/* =====================================================================================
+   COUNTRY CODE — APPLY BUTTON
+===================================================================================== */
+
+/* ===== APPLY BUTTON — DEDICATED SIZE/POSITION VARIABLES =====
+   Independent from other global buttons, so it can be resized without affecting them elsewhere. */
+:root {
+  --apply-btn-padding: 10px 0;
+  --apply-btn-font-size: 0.85rem;
+  --apply-btn-radius: 12px;
+}
+.btn-apply-code { flex: 1 1 50%; width: 50%; min-width: 0; margin: 0; box-sizing: border-box; padding: var(--apply-btn-padding); font-size: var(--apply-btn-font-size); border-radius: var(--apply-btn-radius); min-width: 0 !important; }
+
+/* =====================================================================================
+   FOOTER
+===================================================================================== */
+
+/* Footer */
+.main-footer { margin-top: 35px; text-align: center; padding-bottom: 15px; }
+.social-links { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; }
+.social-btn { font-weight: 700; font-size: 0.9rem; text-decoration: none; padding: 10px 20px; border-radius: 20px; display: inline-flex; align-items: center; gap: 8px; transition: transform 0.1s ease; will-change: transform; }
+.social-btn:active { transform: scale(0.95); }
+.fb-btn { background-color: #1877F2; color: #FFFFFF; }
+.yt-btn { background-color: #FF0000; color: #FFFFFF; }
+.copyright { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 8px; color: #FFFFFF; }
+.footer-tagline { font-weight: 600; font-size: 0.75rem; color: #A5A6B9; letter-spacing: 0.2px; }
+
+/* =====================================================================================
+   BOTTOM NAVIGATION BAR
+===================================================================================== */
+
+/* Fixed Bottom Nav */
+.bottom-nav-bar { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 440px; background: rgba(40, 40, 64, 0.75); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.1); border-radius: 26px; display: flex; justify-content: space-around; align-items: center; padding: 6px; box-shadow: 0 15px 35px rgba(0,0,0,0.45); z-index: 500; }
+
+/* =====================================================================================
+   DOWNLOAD NOTIFICATION BANNER (Past Prizes / Winner History image downloads)
+   Purely additive, fixed-position element — mirrors the app's existing glassmorphism
+   announcement banner language but is a fully independent component so it never
+   competes with the admin-controlled announcement/system-status banner above it.
+===================================================================================== */
+.tz-download-banner {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    width: calc(100% - 40px);
+    max-width: 440px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(0, 168, 255, 0.4);
+    border-radius: 20px;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.35);
+    z-index: 9600;
+    transform: translate3d(-50%, 140%, 0);
+    opacity: 0;
+    pointer-events: none;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease, border-color 0.3s ease;
+}
+.tz-download-banner.tz-dl-visible { transform: translate3d(-50%, 0, 0); opacity: 1; }
+.tz-download-banner.tz-dl-complete { border-color: rgba(57, 255, 20, 0.5); }
+.tz-download-banner .tz-dl-icon { flex: 0 0 auto; display: flex; }
+.tz-download-banner .tz-dl-message { flex: 1 1 auto; font-size: 0.85rem; font-weight: 600; color: #FFFFFF; line-height: 1.35; text-align: left; }
+.tz-dl-spinner-svg { animation: tzDlSpin 0.85s linear infinite; transform-origin: center; }
+@keyframes tzDlSpin { to { transform: rotate(360deg); } }
+
+.bottom-nav-bar.hidden { display: none !important; }
+/* flex:1 makes each tab fill its whole slot in the bar, so the entire slot area
+   (not just the icon's tight padding) registers taps reliably. */
+.nav-tab-btn { background: transparent; border: none; padding: 16px 30px; border-radius: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s ease, transform 0.15s ease; flex: 1; }
+.nav-tab-btn svg { width: 22px; height: 22px; opacity: 0.5; transition: opacity 0.2s ease; display: block; }
+.nav-tab-btn.active { background: rgba(255,255,255,0.14); }
+.nav-tab-btn.active svg { opacity: 1; }
+.nav-tab-btn:active { transform: scale(0.9); }
+
+.hidden { display: none !important; }
+.text-center { text-align: center !important; }
+
+/* ===================== UNIFIED IMAGE LOADING SKELETON ===================== */
+/* Same shimmering skeleton effect used across every Admin Panel asset block
+   (Latest Prize, Past Prize, Notice, Edit Elements); applied here so every
+   img-loading element on the main site shares one consistent loading
+   animation. Scoped to dynamic content only: Latest Prize card, Past Prizes
+   grid/see-more, Notice board, and the Winner popup prize image. Static
+   branding assets (main header logo, giveaway banner, creator badge) are
+   intentionally excluded and load instantly with no animation. */
+img.img-loading { animation: skeletonPulse 1.5s infinite ease-in-out; background: linear-gradient(90deg, #252538 25%, #34344e 50%, #252538 75%); background-size: 200% 100%; color: transparent; min-height: 90px; background-color: #2D2D48; }
+@keyframes skeletonPulse { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+
+/* Block-level variant of the same shimmer, sized to match .winner-card-item, for
+   non-image loading placeholders (currently: the Winners tab's initial loading state). */
+.block-skeleton-row { height: 54px; border-radius: 16px; margin-bottom: 12px; border: 1px solid rgba(255, 255, 255, 0.08); animation: skeletonPulse 1.5s infinite ease-in-out; background: linear-gradient(90deg, #252538 25%, #34344e 50%, #252538 75%); background-size: 200% 100%; background-color: #2D2D48; }
+
+/* Compositor-only sweep. Reused below by the Home Screen prize/notice cards.
+   translate3d does the visual move entirely on the GPU. */
+@keyframes gameShineSweep {
+  0%   { transform: translate3d(-150%, 0, 0) skewX(-25deg); }
+  30%  { transform: translate3d(150%, 0, 0) skewX(-25deg); }
+  100% { transform: translate3d(150%, 0, 0) skewX(-25deg); }
+}
+
+/* Shine sweep — same gameShineSweep animation extended to the Home Screen cards
+   (Latest Prize, Past Prizes, Notice) per the requested upgrade. Reuses the exact
+   gradient/timing/easing from the Gaming card so the loop is identical everywhere.
+   border-radius: inherit keeps the sweep clipped tight to each card's own corners. */
+.prize-image-frame::before,
+.past-prize-cell::before,
+.see-more-cell-item::before,
+.full-preview-frame::before,
+.winner-modal-prize-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0) 30%,
+    rgba(255, 255, 255, 0.22) 50%,
+    rgba(255, 255, 255, 0) 70%,
+    transparent 100%
+  );
+  transform: translate3d(-150%, 0, 0) skewX(-25deg);
+  animation: gameShineSweep 4s infinite cubic-bezier(0.4, 0.0, 0.2, 1);
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* =====================================================================================
+   SHINE-SWEEP EXCLUSIONS & PREVIEW FRAME
+===================================================================================== */
+
+/* "SEE MORE" card is explicitly excluded from the shine sweep — stays a static button */
+.past-prize-cell.see-more-cell::before { content: none; animation: none; }
+
+/* Frame wrapper for the full-image preview modal, so the shine sweep can be applied
+   to the expanded prize image exactly like the other prize frames. */
+.full-preview-frame { position: relative; display: inline-block; max-width: 100%; border-radius: 16px; overflow: hidden; }
+/* "DOWNLOAD IMAGE" button on the full-screen image preview modal — was an inline style
+   in the markup; moved here so every override lives in the stylesheet, not the HTML. */
+.full-width-btn { width: 100%; margin-top: 15px; }
+
+/* =====================================================================================
+   TOUCH / RENDER HINTS (SHARED)
+===================================================================================== */
+
+/* Smoothness touches: faster tap response for frequently-tapped controls */
+.btn, .nav-tab-btn, .slider-arrow, .country-btn, .copy-id-btn, .modal-close-x, .p-tab-btn { touch-action: manipulation; }
+
+/* FIX: this selector list used to also carry a blanket `will-change: transform`. That's
+   fine for the handful of fixed chrome elements (nav bar, arrows) but .winner-card-item
+   and .see-more-cell-item are rendered in bulk lists that can run to dozens/hundreds of
+   nodes — permanently promoting every one of them to its own GPU compositor layer wastes
+   memory and can itself cause jank on mid/low-end phones, the opposite of the 120fps goal.
+   Their tap-feedback scale is a single 0.1-0.15s transition on :active, cheap enough that
+   the browser doesn't need a standing layer for it. */
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+}
+
+/* =====================================================================================
+   RESPONSIVE OVERRIDES (SMALL SCREENS)
+===================================================================================== */
+
+/* Responsive */
+@media (max-width: 380px) {
+    .reg-timer-value { min-width: 50px; font-size: 1.4rem; padding: 12px 10px; }
+    .reg-timer-colon { margin-top: 34px; }
+    .see-more-cell span { font-size: 1.4rem; }
+}
+
+/* =====================================================================================
+   APP PRELOADER (merged from the standalone loading animation project)
+   Full-screen wave-fill loader shown on first paint and re-triggered on network loss.
+   Colors match the site's existing background gradient (#2D2D48 -> #1A1A2E) so the
+   handoff into the main content on hide is seamless. Namespaced --preloader- vars so
+   nothing here collides with any existing custom property in this stylesheet.
+===================================================================================== */
+:root {
+  --preloader-logo-size:     clamp(120px, 20vw, 180px);
+  --preloader-rise-duration: 1.8s;
+  --preloader-ripple-a-dur:  1.4s;
+  --preloader-ripple-b-dur:  2.3s;
+}
+
+#app-preloader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 999999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, #2D2D48 0%, #1A1A2E 100%);
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+
+#app-preloader.preloader-hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* Loader logo stack (two inline <svg> layers, pixel-aligned since both share the same viewBox) */
+.loader {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.loader__logo {
+    position: relative;
+    width: var(--preloader-logo-size);
+    height: var(--preloader-logo-size);
+    transform: translateZ(0);
+}
+
+#app-preloader .logo-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    backface-visibility: hidden;
+}
+
+/* Base state: dimmed monochrome logo, reads as the "empty vessel" */
+#app-preloader .logo-svg--base { opacity: 0.22; }
+
+/* Fill state: full-color logo, revealed bottom-to-top by the wave mask */
+#app-preloader .logo-svg--fill { will-change: transform; }
+
+/* Wave mask animation — loops forever while the preloader is visible */
+#app-preloader .wave-rise {
+    animation: preloader-wave-rise var(--preloader-rise-duration) ease-in-out infinite;
+    will-change: transform;
+}
+
+#app-preloader .wave-ripple--a {
+    animation: preloader-ripple-a var(--preloader-ripple-a-dur) linear infinite;
+    will-change: transform;
+}
+
+#app-preloader .wave-ripple--b {
+    animation: preloader-ripple-b var(--preloader-ripple-b-dur) linear infinite reverse;
+    will-change: transform;
+}
+
+@keyframes preloader-wave-rise {
+    0%, 100% { transform: translate3d(0, 1.15px, 0); }
+    50%      { transform: translate3d(0, -0.18px, 0); }
+}
+
+@keyframes preloader-ripple-a {
+    from { transform: translate3d(0, 0, 0); }
+    to   { transform: translate3d(-0.25px, 0, 0); }
+}
+
+@keyframes preloader-ripple-b {
+    from { transform: translate3d(0, 0, 0); }
+    to   { transform: translate3d(0.334px, 0, 0); }
+}
+
+/* Small status line shown only during the offline/error re-trigger state */
+.preloader-status-text {
+    margin-top: 18px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.65);
+    text-align: center;
+    min-height: 1em;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.preloader-status-text.visible { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+    #app-preloader .wave-rise,
+    #app-preloader .wave-ripple--a,
+    #app-preloader .wave-ripple--b {
+        animation: none !important;
+    }
+    #app-preloader .logo-svg--fill {
+        mask-image: none;
+        -webkit-mask-image: none;
+    }
+    #app-preloader .logo-svg--base {
+        opacity: 0;
+    }
+}
+/* =====================================================================================
+   RENDERING PERFORMANCE LAYER
+   Appended last so these rules win on specificity ties without altering any existing
+   design. Nothing here changes how the site LOOKS — it only changes how much work the
+   browser has to redo per frame, which is what separates "smooth" from "laggy" on a
+   mid-range phone.
+===================================================================================== */
+
+/* 1. OFF-SCREEN PAGES
+   This is a single-page app: Home, Dashboard, Form, Confirm, Success, See-More and Game
+   all live in the DOM at once and are swapped with .active. Inactive pages are already
+   display:none, but the moment one is shown the browser has to lay out and paint the
+   whole thing in one blocking chunk — that is the stutter felt when switching tabs.
+   `content-visibility: auto` lets the browser skip rendering work for a subtree until it
+   is needed, and `contain-intrinsic-size` supplies a placeholder size so the scrollbar
+   doesn't jump when it does. */
+.view-page:not(.active) {
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 1000px;
+}
+
+/* 2. SCROLLING LISTS
+   The dashboard and winners scrollers can hold hundreds of rows. `contain: layout paint`
+   tells the engine that nothing inside can affect geometry outside the box, so a re-render
+   of the list cannot trigger a layout pass on the rest of the page. `overscroll-behavior`
+   stops a flick at the end of the list from chaining into scrolling the page behind it. */
+.players-scroller,
+.see-more-scroll-area,
+.country-list-ul {
+    contain: layout paint;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Individual rows are uniform, self-contained boxes — containing them means adding or
+   filtering one row never forces the siblings to be re-laid-out. */
+.player-row-item,
+.winner-card-item {
+    contain: layout paint;
+}
+
+/* 3. CAROUSEL TRACKS
+   Horizontal swipe tracks: keep the pan gesture on the compositor and stop a horizontal
+   flick from bubbling into a vertical page scroll mid-swipe.
+   Scroll snapping is deliberately NOT added here: the arrow buttons already scroll by
+   exactly one clientWidth, and imposing mandatory snapping on top of that can fight the
+   existing scroll logic if a slide is ever not exactly viewport-width. */
+.swipe-carousel-track {
+    contain: layout paint;
+    overscroll-behavior-x: contain;
+}
+
+/* 4. IMAGE STABILITY
+   Every dynamic image sits in a fixed-ratio frame. Declaring the ratio on the <img> too
+   means the box is reserved before the bytes arrive, so a late-loading prize image can
+   never shove the layout around after paint (cumulative layout shift, and a visible jolt). */
+.prize-image,
+.past-prize-thumb,
+.see-more-img,
+.winner-modal-prize-img {
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+}
+
+/* 5. TEXT RENDERING
+   Swap to the fallback face immediately and swap in Poppins when it arrives, rather than
+   holding the text invisible during the webfont fetch. */
+body { text-rendering: optimizeSpeed; }
+
+/* 6. INPUT LATENCY
+   `touch-action: manipulation` removes the ~300ms click delay legacy mobile browsers add
+   while waiting to see if a tap is a double-tap-to-zoom. This is the single cheapest
+   change that makes taps feel instant rather than sluggish. */
+button, .btn, .nav-tab-btn, .p-tab-btn, a { touch-action: manipulation; }
+
+/* 7. ACCESSIBILITY + PERFORMANCE
+   Honour the OS "reduce motion" preference. This is both an accessibility requirement
+   (animation can trigger vestibular symptoms) and, on low-end hardware, a large win —
+   it disables every infinite loop on the page at once. */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* =====================================================================================
+   GAME HUB — TITLE BANNER
+   Stylized box for the "T ZERONE GAMING HUB" heading on the Game Section page.
+===================================================================================== */
+
+/* border-radius matches .search-input-container input (14px) instead of the previous
+   pill-shaped 28px. width uses calc(100% - 8px) so its left/right edges line up exactly
+   with the Main Game Image Box (.prize-card), which is inset by the 4px+4px side padding
+   on .swipe-carousel-wrapper below it — height/padding are untouched so only the width
+   changes. `top` is independently adjustable without affecting the stacking order. */
+.game-hub-banner { position: relative; top: 10px; text-align: center; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 14px 20px; margin: 0 auto 25px; width: calc(100% - 8px); box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3); }
+.game-hub-banner-text { font-size: 1.3rem; font-weight: 800; letter-spacing: 1.5px; color: #FFFFFF; text-shadow: none; margin: 0; }
+
+/* Game section divider — scoped positioning override so only this divider (above the
+   Game Hub banner) can be nudged up/down without affecting other .neon-divider uses.
+   Values mirrored from .divider-tight (Home page) so the line sits at the identical
+   distance below the logo on both pages. Adjust `top` here to nudge independently. */
+.game-section-divider { position: relative; top: 0; margin-top: -45px; margin-bottom: 10px; }
+
+/* Featured game (CLASH BLADE) image box — matches the standard .prize-image-frame
+   rounding (24px) so the image corners are clipped cleanly with no square "cutout"
+   against the rounded frame. overflow:hidden clips only the image content; the frame's
+   own box-shadow is painted outside the border box, so it is never clipped and stays
+   fully visible on every edge. */
+.game-featured-frame { border-radius: 24px; overflow: hidden; box-shadow: 0 12px 26px -8px rgba(0, 0, 0, 0.4), 0 4px 10px -3px rgba(0, 0, 0, 0.25); }
+.game-featured-frame img,
+.game-featured-frame .prize-fallback-placeholder { border-radius: 24px; }
+
+/* "CLASH BLADE" game title — scoped override (in addition to the shared .section-title
+   rule) so only this heading can be nudged vertically without touching every other
+   .section-title instance (REGISTRATION TIME, LATEST PRIZE, NOTICE, etc.). Shifted up
+   slightly to sit correctly under the raised divider/banner above it. */
+.game-title-heading { position: relative; top: -6px; }
+
+/* "START THE GAME" button — scoped override via ID so only this CTA can be nudged
+   vertically without affecting .btn-action-green elsewhere (e.g. the Home page CTA). */
+#game-start-btn { position: relative; top: -6px; }
