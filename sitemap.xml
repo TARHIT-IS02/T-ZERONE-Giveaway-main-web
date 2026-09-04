@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Sitemap — T ZERONE Giveaway (Main Website)
+
+  The site is a single-page app: Home, Dashboard, Form, Confirm, Success and Game are
+  all sections of index.html swapped in by navigateTo(), not separate documents. Listing
+  fabricated per-section URLs would advertise pages that return the same HTML and dilute
+  crawl budget, so only the one genuinely distinct document is listed here.
+
+  The <image:image> entries point search engines at the same logo/hero assets already
+  preloaded in <head> (og:image, twitter:image, and the above-the-fold preloads), so
+  Google Images can index them against this URL without a second crawl pass.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://t-zerone-giveaway.vercel.app/</loc>
+    <lastmod>2026-09-04</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://raw.githubusercontent.com/TARHIT-T0SVX/All-image-t-z/refs/heads/main/TZERONE_OFFICIAL_LOGO.png</image:loc>
+      <image:title>T ZERONE Official Logo</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://raw.githubusercontent.com/TARHIT-T0SVX/All-image-t-z/refs/heads/main/gift_giveaway_bb.png</image:loc>
+      <image:title>T ZERONE Giveaway Hero Image</image:title>
+    </image:image>
+  </url>
+</urlset>
